@@ -24,7 +24,31 @@
 
 Both route to `https://api.llmgateway.io/v1` and send an `x-source: devpass-code` header so DevPass usage is attributed correctly.
 
-### Install & run (from source)
+### Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/theopenco/devpass-code/main/install | bash
+```
+
+Or with a package manager:
+
+```bash
+npm i -g devpass-code            # or: bun / pnpm / yarn
+brew install theopenco/tap/devpass-code   # macOS & Linux
+paru -S devpass-code-bin         # Arch Linux (AUR)
+```
+
+Run it with Docker:
+
+```bash
+docker run -it --rm ghcr.io/theopenco/devpass-code
+```
+
+Windows binaries (`devpass-code-windows-*.zip`) are attached to every [GitHub release](https://github.com/theopenco/devpass-code/releases); `npm i -g devpass-code` works there too.
+
+Already installed? Upgrade in place with `devpass-code upgrade`.
+
+### Run from source
 
 ```bash
 bun install

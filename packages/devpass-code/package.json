@@ -16,7 +16,7 @@
     "dev:temporary": "bun run --conditions=browser ./src/temporary.ts"
   },
   "bin": {
-    "devpass-code": "./bin/opencode"
+    "devpass-code": "./bin/devpass-code"
   },
   "exports": {
     "./*": "./src/*.ts"

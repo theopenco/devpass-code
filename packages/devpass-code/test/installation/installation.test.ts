@@ -96,7 +96,7 @@ describe("installation", () => {
       Effect.gen(function* () {
         const result = yield* Installation.use.latest("npm")
         expect(result).toBe("1.5.0")
-        expect(npmCalls).toContain(`https://registry.npmjs.org/opencode-ai/${InstallationChannel}`)
+        expect(npmCalls).toContain(`https://registry.npmjs.org/devpass-code/${InstallationChannel}`)
       }),
     )
 
@@ -110,7 +110,7 @@ describe("installation", () => {
       Effect.gen(function* () {
         const result = yield* Installation.use.latest("bun")
         expect(result).toBe("1.6.0")
-        expect(bunCalls).toContain(`https://registry.npmjs.org/opencode-ai/${InstallationChannel}`)
+        expect(bunCalls).toContain(`https://registry.npmjs.org/devpass-code/${InstallationChannel}`)
       }),
     )
 
@@ -124,7 +124,7 @@ describe("installation", () => {
       Effect.gen(function* () {
         const result = yield* Installation.use.latest("pnpm")
         expect(result).toBe("1.7.0")
-        expect(pnpmCalls).toContain(`https://registry.npmjs.org/opencode-ai/${InstallationChannel}`)
+        expect(pnpmCalls).toContain(`https://registry.npmjs.org/devpass-code/${InstallationChannel}`)
       }),
     )
 
@@ -146,15 +146,17 @@ describe("installation", () => {
 
     testEffect(
       testLayer(
-        () => jsonResponse({ versions: { stable: "2.0.0" } }),
+        () => jsonResponse({}), // HTTP not used for brew
         (cmd, args) => {
-          // getBrewFormula: return core formula (no tap)
-          if (cmd === "brew" && args.includes("--formula") && args.includes("anomalyco/tap/opencode")) return ""
-          if (cmd === "brew" && args.includes("--formula") && args.includes("opencode")) return "opencode"
+          // getBrewFormula: return plain formula (no tap)
+          if (cmd === "brew" && args.includes("--formula") && args.includes("theopenco/tap/devpass-code")) return ""
+          if (cmd === "brew" && args.includes("--formula") && args.includes("devpass-code")) return "devpass-code"
+          if (cmd === "brew" && args.includes("--json=v2"))
+            return JSON.stringify({ formulae: [{ versions: { stable: "2.0.0" } }] })
           return ""
         },
       ),
-    ).effect("reads brew formulae API versions", () =>
+    ).effect("reads brew plain formula versions via CLI", () =>
       Effect.gen(function* () {
         const result = yield* Installation.use.latest("brew")
         expect(result).toBe("2.0.0")
@@ -168,7 +170,8 @@ describe("installation", () => {
       testLayer(
         () => jsonResponse({}), // HTTP not used for tap formula
         (cmd, args) => {
-          if (cmd === "brew" && args.includes("anomalyco/tap/opencode") && args.includes("--formula")) return "opencode"
+          if (cmd === "brew" && args.includes("theopenco/tap/devpass-code") && args.includes("--formula"))
+            return "devpass-code"
           if (cmd === "brew" && args.includes("--json=v2")) return brewInfoJson
           return ""
         },
