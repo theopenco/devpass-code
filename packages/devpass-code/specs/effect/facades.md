@@ -201,7 +201,7 @@ Most of the original facade-removal backlog is already done. The practical remai
 - [x] `src/worktree/index.ts` (`Worktree`) - service-local facades removed
 - [x] `src/plugin/index.ts` (`Plugin`) - service-local facades removed
 - [x] `src/snapshot/index.ts` (`Snapshot`) - service-local facades removed
-- [x] `../core/src/filesystem.ts` (`FileSystem`) - legacy opencode service removed
+- [x] `../core/src/filesystem.ts` (`FileSystem`) - legacy DevPass Code service removed
 - [x] `src/lsp/index.ts` (`LSP`) - facades removed and merged
 - [x] `src/mcp/index.ts` (`MCP`) - facades removed and merged
 - [x] `src/config/config.ts` (`Config`) - facades removed and merged

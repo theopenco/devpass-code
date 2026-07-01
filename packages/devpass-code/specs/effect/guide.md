@@ -63,7 +63,7 @@ unless the service truly cannot live in `AppLayer`.
 
 ## Runtime Flags
 
-Read opencode runtime flags through
+Read DevPass Code runtime flags through
 [`RuntimeFlags.Service`](../../src/effect/runtime-flags.ts), not through
 mutable `Flag` or late `process.env` reads.
 

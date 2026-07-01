@@ -1,6 +1,6 @@
 # Server Package Extraction
 
-Practical reference for a future `packages/server` split after the opencode
+Practical reference for a future `packages/server` split after the DevPass Code
 server moved to the Effect HttpApi backend.
 
 ## Current State
@@ -42,7 +42,7 @@ imports it to host routes.
 
 1. Keep shrinking OpenAPI compatibility shims in `httpapi/public.ts`.
 2. Move stable domain schemas into shared packages only when they no longer
-   depend on opencode-local runtime modules.
+   depend on devpass-code-local runtime modules.
 3. Extract pure HttpApi contract modules into `packages/server` once the contract
    can compile without importing `packages/devpass-code` implementation details.
 4. Extract handler factories after their service dependencies can be supplied by

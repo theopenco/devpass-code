@@ -4,13 +4,13 @@ This is a plugin to simulate a remote environment locally. Add this to `.opencod
   "plugin": ["../packages/devpass-code/src/control-plane/dev/debug-workspace-plugin.ts"],
 ```
 
-In a separate terminal, run a separate OpenCode server. This will act like a remote server and the local instance will proxy all requests to it:
+In a separate terminal, run a separate DevPass Code server. This will act like a remote server and the local instance will proxy all requests to it:
 
 ```
 ./packages/devpass-code/script/run-workspace-server
 ```
 
-With the plugin install, you can now run OpenCode and create a `debug` workspace type. This will create a "remote" workspace which talks to the second workspace server started above.
+With the plugin install, you can now run DevPass Code and create a `debug` workspace type. This will create a "remote" workspace which talks to the second workspace server started above.
 
 How this works:
 
