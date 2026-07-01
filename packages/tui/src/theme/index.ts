@@ -13,6 +13,7 @@ import flexoki from "./assets/flexoki.json" with { type: "json" }
 import github from "./assets/github.json" with { type: "json" }
 import gruvbox from "./assets/gruvbox.json" with { type: "json" }
 import kanagawa from "./assets/kanagawa.json" with { type: "json" }
+import llmgateway from "./assets/llmgateway.json" with { type: "json" }
 import lucentOrng from "./assets/lucent-orng.json" with { type: "json" }
 import material from "./assets/material.json" with { type: "json" }
 import matrix from "./assets/matrix.json" with { type: "json" }
@@ -141,6 +142,7 @@ export const DEFAULT_THEMES: Record<string, ThemeJson> = {
   github,
   gruvbox,
   kanagawa,
+  llmgateway,
   material,
   matrix,
   mercury,
