@@ -35,7 +35,7 @@ interface LoopbackLogin {
   wait: () => Promise<string>
 }
 
-async function startLoopbackLogin(source: string): Promise<LoopbackLogin> {
+async function startLoopbackLogin(source: string, org: "default" | "devpass"): Promise<LoopbackLogin> {
   let resolveKey!: (key: string) => void
   let rejectKey!: (error: Error) => void
   const keyPromise = new Promise<string>((resolve, reject) => {
@@ -90,6 +90,7 @@ async function startLoopbackLogin(source: string): Promise<LoopbackLogin> {
     callback,
     state,
     source,
+    org,
     name: "DevPass Code CLI",
   })
   const url = `${appUrl()}/connect/cli?${params.toString()}`
@@ -114,6 +115,12 @@ interface LlmGatewayPluginConfig {
   providerID: string
   label: string
   source: string
+  /**
+   * Which LLM Gateway org the minted key lives in: "devpass" bills the DevPass
+   * subscription (personal org), "default" bills pay-as-you-go credits on the
+   * user's default dashboard org.
+   */
+  org: "default" | "devpass"
 }
 
 export function makeLlmGatewayPlugin(config: LlmGatewayPluginConfig) {
@@ -126,7 +133,7 @@ export function makeLlmGatewayPlugin(config: LlmGatewayPluginConfig) {
             type: "oauth",
             label: "Log in with browser",
             authorize: async () => {
-              const { url, wait } = await startLoopbackLogin(config.source)
+              const { url, wait } = await startLoopbackLogin(config.source, config.org)
               open(url).catch(() => {})
               return {
                 url,
@@ -163,10 +170,12 @@ export const LlmGatewayAuthPlugin = makeLlmGatewayPlugin({
   providerID: "llmgateway",
   label: "LLM Gateway",
   source: "devpass-code",
+  org: "default",
 })
 
 export const LlmGatewayDevPassAuthPlugin = makeLlmGatewayPlugin({
   providerID: "llmgateway-devpass",
   label: "LLM Gateway DevPass",
   source: "devpass-code",
+  org: "devpass",
 })
