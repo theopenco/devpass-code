@@ -1,8 +1,8 @@
-# Remove `packages/opencode/src/storage/db.ts`
+# Remove `packages/devpass-code/src/storage/db.ts`
 
 ## Goal
 
-Remove all production usages of the legacy `packages/opencode/src/storage/db.ts` module.
+Remove all production usages of the legacy `packages/devpass-code/src/storage/db.ts` module.
 
 This means eliminating imports from `@/storage/db` or `./storage/db`, including:
 
@@ -18,42 +18,42 @@ This does not mean removing SQLite or Drizzle everywhere in one step. The smalle
 
 ## Current Inventory
 
-Production imports from `packages/opencode/src/storage/db.ts` are concentrated in 22 source files:
+Production imports from `packages/devpass-code/src/storage/db.ts` are concentrated in 22 source files:
 
-- `packages/opencode/src/account/repo.ts`
-- `packages/opencode/src/cli/cmd/db.ts`
-- `packages/opencode/src/cli/cmd/import.ts`
-- `packages/opencode/src/cli/cmd/stats.ts`
-- `packages/opencode/src/control-plane/workspace.ts`
-- `packages/opencode/src/index.ts`
-- `packages/opencode/src/node.ts`
-- `packages/opencode/src/permission/index.ts`
-- `packages/opencode/src/project/project.ts`
-- `packages/opencode/src/server/projectors.ts`
-- `packages/opencode/src/server/routes/instance/httpapi/handlers/sync.ts`
-- `packages/opencode/src/server/shared/fence.ts`
-- `packages/opencode/src/session/message-v2.ts`
-- `packages/opencode/src/session/projectors.ts`
-- `packages/opencode/src/session/prompt.ts`
-- `packages/opencode/src/session/session.ts`
-- `packages/opencode/src/session/todo.ts`
-- `packages/opencode/src/share/share-next.ts`
-- `packages/opencode/src/storage/db.ts`
-- `packages/opencode/src/sync/index.ts`
-- `packages/opencode/src/worktree/index.ts`
+- `packages/devpass-code/src/account/repo.ts`
+- `packages/devpass-code/src/cli/cmd/db.ts`
+- `packages/devpass-code/src/cli/cmd/import.ts`
+- `packages/devpass-code/src/cli/cmd/stats.ts`
+- `packages/devpass-code/src/control-plane/workspace.ts`
+- `packages/devpass-code/src/index.ts`
+- `packages/devpass-code/src/node.ts`
+- `packages/devpass-code/src/permission/index.ts`
+- `packages/devpass-code/src/project/project.ts`
+- `packages/devpass-code/src/server/projectors.ts`
+- `packages/devpass-code/src/server/routes/instance/httpapi/handlers/sync.ts`
+- `packages/devpass-code/src/server/shared/fence.ts`
+- `packages/devpass-code/src/session/message-v2.ts`
+- `packages/devpass-code/src/session/projectors.ts`
+- `packages/devpass-code/src/session/prompt.ts`
+- `packages/devpass-code/src/session/session.ts`
+- `packages/devpass-code/src/session/todo.ts`
+- `packages/devpass-code/src/share/share-next.ts`
+- `packages/devpass-code/src/storage/db.ts`
+- `packages/devpass-code/src/sync/index.ts`
+- `packages/devpass-code/src/worktree/index.ts`
 
 There are 65 direct API/type references in those files. The references fall into the groups below.
 
 ## Group 1: Database Runtime And Startup
 
-Status: Completed. Startup, the public node export, and database CLI tooling no longer import the legacy opencode database wrapper; `packages/opencode/src/storage/db.ts` has been deleted.
+Status: Completed. Startup, the public node export, and database CLI tooling no longer import the legacy opencode database wrapper; `packages/devpass-code/src/storage/db.ts` has been deleted.
 
 Files:
 
-- `packages/opencode/src/storage/db.ts`
-- `packages/opencode/src/index.ts`
-- `packages/opencode/src/node.ts`
-- `packages/opencode/src/cli/cmd/db.ts`
+- `packages/devpass-code/src/storage/db.ts`
+- `packages/devpass-code/src/index.ts`
+- `packages/devpass-code/src/node.ts`
+- `packages/devpass-code/src/cli/cmd/db.ts`
 
 Current usage:
 
@@ -80,9 +80,9 @@ Status: Completed. `SyncEvent` and the opencode projector boundary were removed;
 
 Files:
 
-- `packages/opencode/src/sync/index.ts`
-- `packages/opencode/src/session/projectors.ts`
-- `packages/opencode/src/server/projectors.ts`
+- `packages/devpass-code/src/sync/index.ts`
+- `packages/devpass-code/src/session/projectors.ts`
+- `packages/devpass-code/src/server/projectors.ts`
 
 Current usage:
 
@@ -113,10 +113,10 @@ Status: Completed. These services no longer import the legacy opencode database 
 
 Files:
 
-- `packages/opencode/src/account/repo.ts`
-- `packages/opencode/src/project/project.ts`
-- `packages/opencode/src/control-plane/workspace.ts`
-- `packages/opencode/src/share/share-next.ts`
+- `packages/devpass-code/src/account/repo.ts`
+- `packages/devpass-code/src/project/project.ts`
+- `packages/devpass-code/src/control-plane/workspace.ts`
+- `packages/devpass-code/src/share/share-next.ts`
 
 Current usage:
 
@@ -148,11 +148,11 @@ Status: Completed. Session/message reads and projector writes have moved off the
 
 Files:
 
-- `packages/opencode/src/session/session.ts`
-- `packages/opencode/src/session/message-v2.ts`
-- `packages/opencode/src/session/prompt.ts`
-- `packages/opencode/src/session/todo.ts`
-- `packages/opencode/src/session/projectors.ts`
+- `packages/devpass-code/src/session/session.ts`
+- `packages/devpass-code/src/session/message-v2.ts`
+- `packages/devpass-code/src/session/prompt.ts`
+- `packages/devpass-code/src/session/todo.ts`
+- `packages/devpass-code/src/session/projectors.ts`
 
 Current usage:
 
@@ -187,12 +187,12 @@ Status: Completed. Remaining one-off CLI/admin reads and writes now use core dat
 
 Files:
 
-- `packages/opencode/src/cli/cmd/import.ts`
-- `packages/opencode/src/cli/cmd/stats.ts`
-- `packages/opencode/src/server/shared/fence.ts`
-- `packages/opencode/src/server/routes/instance/httpapi/handlers/sync.ts`
-- `packages/opencode/src/worktree/index.ts`
-- `packages/opencode/src/permission/index.ts`
+- `packages/devpass-code/src/cli/cmd/import.ts`
+- `packages/devpass-code/src/cli/cmd/stats.ts`
+- `packages/devpass-code/src/server/shared/fence.ts`
+- `packages/devpass-code/src/server/routes/instance/httpapi/handlers/sync.ts`
+- `packages/devpass-code/src/worktree/index.ts`
+- `packages/devpass-code/src/permission/index.ts`
 
 Current usage:
 
@@ -217,7 +217,7 @@ Target shape:
 
 ## Recommended Migration Sequence
 
-All migration groups are complete or superseded. `packages/opencode/src/storage/db.ts` has been deleted.
+All migration groups are complete or superseded. `packages/devpass-code/src/storage/db.ts` has been deleted.
 
 ## Superseded: Data Migrations
 
@@ -230,10 +230,10 @@ The previous opencode `data-migration.ts` service only backfilled session usage 
 - Nested reads inside a transaction must use the active transaction, not the root client.
 - `SyncEvent.run` sequence allocation must keep immediate transaction behavior.
 - Post-commit publish effects must not run before the transaction commits.
-- Existing schema ownership remains in `packages/core/src/**/*.sql.ts`; do not move table definitions back into `packages/opencode`.
+- Existing schema ownership remains in `packages/core/src/**/*.sql.ts`; do not move table definitions back into `packages/devpass-code`.
 
 ## Verification Commands
 
-- `rg "@/storage/db|./storage/db|Database\.(use|transaction|effect|Client|getPath)|\bTxOrDb\b|\bTransaction\b" packages/opencode/src`
-- `bun typecheck` from `packages/opencode`
-- Relevant package tests from `packages/opencode`, not the repo root
+- `rg "@/storage/db|./storage/db|Database\.(use|transaction|effect|Client|getPath)|\bTxOrDb\b|\bTransaction\b" packages/devpass-code/src`
+- `bun typecheck` from `packages/devpass-code`
+- Relevant package tests from `packages/devpass-code`, not the repo root

@@ -28,7 +28,7 @@ Both route to `https://api.llmgateway.io/v1` and send an `x-source: devpass-code
 
 ```bash
 bun install
-bun run packages/opencode/src/index.ts --help
+bun run packages/devpass-code/src/index.ts --help
 ```
 
 ### Authenticate
