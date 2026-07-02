@@ -2,6 +2,7 @@
 
 import { Script } from "@opencode-ai/script"
 import { $ } from "bun"
+import { existsSync } from "fs"
 import { fileURLToPath } from "url"
 
 console.log("=== publishing ===\n")
@@ -9,6 +10,7 @@ console.log("=== publishing ===\n")
 const dir = fileURLToPath(new URL("..", import.meta.url))
 process.chdir(dir)
 const tag = `v${Script.version}`
+const syncBranch = process.env.GITHUB_REF_NAME || "main"
 
 const pkgjsons = await Array.fromAsync(
   new Bun.Glob("**/package.json").scan({
@@ -38,19 +40,12 @@ await prepareReleaseFiles()
 console.log("\n=== cli ===\n")
 await $`bun ./packages/devpass-code/script/publish.ts`
 
-console.log("\n=== preview cli ===\n")
-await $`bun ./packages/cli/script/publish.ts`
+// The preview cli, sdk, plugin, and ui packages are published under the
+// @opencode-ai npm scope, which belongs to upstream. Skip them until this
+// fork has its own scope for them.
 
-console.log("\n=== sdk ===\n")
-await $`bun ./packages/sdk/js/script/publish.ts`
-
-console.log("\n=== plugin ===\n")
-await $`bun ./packages/plugin/script/publish.ts`
-
-console.log("\n=== ui ===\n")
-await $`bun ./packages/ui/script/publish.ts`
-
-if (Script.release) {
+if (Script.release && process.env.LATEST_YML_DIR && existsSync(process.env.LATEST_YML_DIR)) {
+  console.log("\n=== desktop ===\n")
   await $`bun ./packages/desktop/scripts/finalize-latest-json.ts`
   await $`bun ./packages/desktop/scripts/finalize-latest-yml.ts`
 }
@@ -62,10 +57,10 @@ if (Script.release && !Script.preview) {
   await $`git push origin refs/tags/${tag} --force-with-lease --no-verify`
   await new Promise((resolve) => setTimeout(resolve, 5_000))
   await $`git fetch origin`
-  await $`git checkout -B dev origin/dev`
+  await $`git checkout -B ${syncBranch} origin/${syncBranch}`
   await prepareReleaseFiles()
   await $`git commit -am "sync release versions for ${tag}"`
-  await $`git push origin HEAD:dev --no-verify`
+  await $`git push origin HEAD:${syncBranch} --no-verify`
 }
 
 if (Script.release) {
