@@ -486,6 +486,8 @@ jobs:
           AUR_KEY: ${{ secrets.AUR_KEY }}
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
           GH_REPO: ${{ needs.version.outputs.repo }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # No NODE_AUTH_TOKEN: publishing authenticates via OIDC trusted publishing.
+          # Passing an empty NPM_TOKEN here writes a blank _authToken to .npmrc, which
+          # makes npm fail with ENEEDAUTH instead of falling through to OIDC.
           NPM_CONFIG_PROVENANCE: true
           LATEST_YML_DIR: /tmp/latest-yml
