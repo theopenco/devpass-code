@@ -397,6 +397,8 @@ jobs:
       - build-electron
     if: always() && !failure() && !cancelled()
     runs-on: ubuntu-latest
+    env:
+      AUR_KEY: ${{ secrets.AUR_KEY }}
     steps:
       - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
 
@@ -455,7 +457,7 @@ jobs:
           git config --global user.email "devpass-code-release@users.noreply.github.com"
 
       - name: Setup SSH for AUR
-        if: ${{ secrets.AUR_KEY != '' }}
+        if: ${{ env.AUR_KEY != '' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y pacman-package-manager
