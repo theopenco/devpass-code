@@ -217,6 +217,12 @@ for (const item of targets) {
       {
         name,
         version: Script.version,
+        // Must match the source repo in the provenance attestation, or npm
+        // rejects the publish with a 422 when NPM_CONFIG_PROVENANCE is set.
+        repository: {
+          type: "git",
+          url: "git+https://github.com/theopenco/devpass-code.git",
+        },
         preferUnplugged: true,
         os: [item.os],
         cpu: [item.arch],
