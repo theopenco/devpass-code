@@ -41,10 +41,14 @@ const VERSION = await (async () => {
       if (!res.ok) throw new Error(res.statusText)
       return res.json().then((data: any) => data.version)
     })
-    .then(
-      async (published: string | null) =>
-        published ?? (await Bun.file(path.resolve(import.meta.dir, "../../devpass-code/package.json")).json()).version,
-    )
+    .then(async (published: string | null) => {
+      // The repo version acts as a floor: after an upstream sync bumps the
+      // checked-in version past what npm has, the next release continues from
+      // the synced version instead of the last published one.
+      const repo = (await Bun.file(path.resolve(import.meta.dir, "../../devpass-code/package.json")).json()).version
+      if (!published) return repo
+      return semver.gt(repo, published) ? repo : published
+    })
   const [major, minor, patch] = version.split(".").map((x: string) => Number(x) || 0)
   const t = env.OPENCODE_BUMP?.toLowerCase()
   if (t === "major") return `${major + 1}.0.0`
