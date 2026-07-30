@@ -207,7 +207,6 @@ jobs:
 
   build-electron:
     needs:
-      - build-cli
       - version
     if: github.repository == 'theopenco/devpass-code' && needs.version.outputs.desktop == 'true'
     continue-on-error: false
@@ -301,10 +300,7 @@ jobs:
         env:
           OPENCODE_VERSION: ${{ needs.version.outputs.version }}
           OPENCODE_CHANNEL: ${{ (github.ref_name == 'beta' && 'beta') || 'prod' }}
-          OPENCODE_CLI_ARTIFACT: ${{ (runner.os == 'Windows' && 'devpass-code-cli-windows') || 'devpass-code-cli' }}
           RUST_TARGET: ${{ matrix.settings.target }}
-          GH_TOKEN: ${{ github.token }}
-          GITHUB_RUN_ID: ${{ github.run_id }}
 
       - name: Build
         run: bun run build
