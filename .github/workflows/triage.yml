@@ -6,7 +6,7 @@ on:
 
 jobs:
   triage:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       issues: write
@@ -28,6 +28,9 @@ jobs:
              grep -qxiF "$LOGIN" .github/TEAM_MEMBERS; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
             echo "Skipping issue automation for exempt author: $LOGIN ($ASSOCIATION)"
+          elif [ -z "${{ secrets.OPENCODE_API_KEY }}" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Skipping: OPENCODE_API_KEY not configured"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
