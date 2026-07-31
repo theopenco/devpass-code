@@ -423,10 +423,21 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
+      # No registry-url: it makes setup-node write an .npmrc with
+      # //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}, which resolves to an
+      # empty credential now that we publish via OIDC and would shadow the
+      # trusted-publishing exchange. The default registry is npmjs.org anyway.
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "24"
-          registry-url: "https://registry.npmjs.org"
+
+      # Trusted publishing (OIDC) needs npm >= 11.5.1; Node 24 still bundles 11.3.x.
+      # Pinned to 11 rather than latest: npm 12 requires node >= 24.15, so @latest
+      # would break the moment setup-node resolves an older 24.x.
+      - name: Upgrade npm for trusted publishing
+        run: |
+          npm install -g npm@11
+          npm --version
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
@@ -492,9 +503,11 @@ jobs:
           AUR_KEY: ${{ secrets.AUR_KEY }}
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
           GH_REPO: ${{ needs.version.outputs.repo }}
-          # Token auth: the platform binary packages (devpass-code-<os>-<arch>) are new
-          # package names that OIDC trusted publishing can't create on first publish, so
-          # an automation token is required. Provenance still works via id-token: write.
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # npm auth comes from OIDC trusted publishing (permissions.id-token: write
+          # above). Every devpass-code* package has a trusted publisher pinned to this
+          # repo + publish.yml, so no NPM_TOKEN is involved. To add a new platform
+          # package, publish its first version with a token, then register it with
+          #   npm trust github <pkg> --repo theopenco/devpass-code --file publish.yml \
+          #     --allow-publish --yes
           NPM_CONFIG_PROVENANCE: true
           LATEST_YML_DIR: /tmp/latest-yml
