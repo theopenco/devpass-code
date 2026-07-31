@@ -59,7 +59,8 @@ if (Script.release && !Script.preview) {
   await $`git fetch origin`
   await $`git checkout -B ${syncBranch} origin/${syncBranch}`
   await prepareReleaseFiles()
-  await $`git commit -am "sync release versions for ${tag}"`
+  // [skip ci] so this push does not re-trigger the publish workflow on main.
+  await $`git commit -am "sync release versions for ${tag} [skip ci]"`
   await $`git push origin HEAD:${syncBranch} --no-verify`
 }
 
