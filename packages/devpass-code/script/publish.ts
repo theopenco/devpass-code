@@ -79,10 +79,23 @@ await Bun.file(`./dist/${pkg.name}/package.json`).write(
   ),
 )
 
-const tasks = Object.entries(binaries).map(async ([name]) => {
-  await publish(`./dist/${name}`, name, binaries[name])
-})
-await Promise.all(tasks)
+// Promise.all would reject on the first failure and take the process down with it,
+// killing the other in-flight npm publishes mid-upload. That both hides which
+// packages actually failed and leaves the release half-published.
+const results = await Promise.allSettled(
+  Object.entries(binaries).map(async ([name]) => {
+    await publish(`./dist/${name}`, name, binaries[name])
+    return name
+  }),
+)
+const failed = results.flatMap((r, i) =>
+  r.status === "rejected" ? [`${Object.keys(binaries)[i]}: ${r.reason?.message ?? r.reason}`] : [],
+)
+if (failed.length) {
+  console.error(`failed to publish ${failed.length}/${results.length} binary packages:`)
+  for (const f of failed) console.error(`  ${f}`)
+  process.exit(1)
+}
 await publish(`./dist/${pkg.name}`, pkg.name, version)
 
 const image = `ghcr.io/${REPO}`
