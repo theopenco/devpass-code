@@ -72,7 +72,7 @@ This agent is useful when you want the LLM to analyze code, suggest changes, or 
 
 _Mode_: `subagent`
 
-A general-purpose agent for researching complex questions and executing multi-step tasks. Has full tool access (except todo), so it can make file changes when needed. Use this to run multiple units of work in parallel.
+A general-purpose agent for researching complex questions and executing multi-step tasks. Has full tool access, so it can make file changes when needed. Use this to run multiple units of work in parallel.
 
 ---
 
@@ -366,7 +366,7 @@ If you don’t specify a model, primary agents use the [model globally configure
 }
 ```
 
-The model ID in your OpenCode config uses the format `provider/model-id`. For example, if you're using [OpenCode Zen](/docs/zen), you would use `opencode/gpt-5.1-codex` for GPT 5.1 Codex.
+The model ID in your OpenCode config uses the format `provider/model-id`. For example, if you're using [OpenCode Zen](https://opencode.ai/v2/docs/console/), you would use `opencode/gpt-5.1-codex` for GPT 5.1 Codex.
 
 ---
 
@@ -439,7 +439,6 @@ The available permission keys are:
 | `bash`               | `bash`                                                           |
 | `task`               | `task`                                                           |
 | `external_directory` | Any tool that reads or writes files outside the project worktree |
-| `todowrite`          | `todowrite`, `todoread`                                          |
 | `webfetch`           | `webfetch`                                                       |
 | `websearch`          | `websearch`                                                      |
 | `lsp`                | `lsp`                                                            |

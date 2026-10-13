@@ -74,7 +74,7 @@ export function bootstrap(options: BootstrapOptions) {
   })
 }
 
-export * as OauthCallbackPage from "./page"
+export * as OauthCallbackPage from "./page.js"
 
 type Status = "pending" | "success" | "error"
 
