@@ -20,7 +20,7 @@ function createPool(lineDiffType: "none" | "word-line") {
       poolSize: 2,
     },
     {
-      theme: "DevPass Code",
+      theme: "OpenCode",
       lineDiffType,
       // Pierre renders with the pool's options, not the viewer's, whenever the pool works. The "none" pool only
       // serves diffs above the large-file threshold, so it carries the plain-text fallback the viewer requests.
