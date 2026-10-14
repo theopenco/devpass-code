@@ -11,6 +11,7 @@ on:
       - "bun.lock"
       - "package.json"
       - "packages/*/package.json"
+      - "services/*/package.json"
       - "flake.lock"
       - "nix/node_modules.nix"
       - "nix/scripts/**"
@@ -30,11 +31,9 @@ jobs:
       matrix:
         include:
           - system: x86_64-linux
-            runner: blacksmith-4vcpu-ubuntu-2404
+            runner: ubuntu-24.04
           - system: aarch64-linux
-            runner: blacksmith-4vcpu-ubuntu-2404-arm
-          - system: x86_64-darwin
-            runner: macos-15-intel
+            runner: ubuntu-24.04-arm
           - system: aarch64-darwin
             runner: macos-latest
     runs-on: ${{ matrix.runner }}
@@ -91,7 +90,7 @@ jobs:
   update-hashes:
     needs: compute-hash
     if: github.event_name != 'pull_request'
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
@@ -125,7 +124,7 @@ jobs:
 
           [ -f "$HASH_FILE" ] || echo '{"nodeModules":{}}' > "$HASH_FILE"
 
-          for SYSTEM in x86_64-linux aarch64-linux x86_64-darwin aarch64-darwin; do
+          for SYSTEM in x86_64-linux aarch64-linux aarch64-darwin; do
             FILE="hashes/hash-${SYSTEM}/hash.txt"
             if [ -f "$FILE" ]; then
               HASH="$(tr -d '[:space:]' < "$FILE")"

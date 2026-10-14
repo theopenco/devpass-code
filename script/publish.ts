@@ -1,8 +1,7 @@
 #!/usr/bin/env bun
 
-import { Script } from "@opencode-ai/script"
+import { Script } from "@opencode/script"
 import { $ } from "bun"
-import { existsSync } from "fs"
 import { fileURLToPath } from "url"
 
 console.log("=== publishing ===\n")
@@ -27,7 +26,20 @@ async function prepareReleaseFiles() {
   }
 
   await $`bun install`
-  await $`./packages/sdk/js/script/build.ts`
+}
+
+async function writeChangelog() {
+  const notes = process.env["OPENCODE_RELEASE_NOTES"]?.trim()
+  if (!notes) return
+  const file = Bun.file("CHANGELOG.md")
+  const text = await file.text()
+  const lines = text.split("\n")
+  if (lines.some((line) => line === `## ${tag}` || line.startsWith(`## ${tag} `))) return
+  const index = lines.findIndex((line) => line.startsWith("## "))
+  const head = (index === -1 ? lines : lines.slice(0, index)).join("\n").trimEnd()
+  const rest = index === -1 ? "" : lines.slice(index).join("\n")
+  const entry = `## ${tag} — ${new Date().toISOString().slice(0, 10)}\n\n${notes}\n`
+  await file.write(`${head}\n\n${entry}${rest ? `\n${rest}` : ""}`)
 }
 
 if (Script.release && !Script.preview) {
@@ -38,20 +50,13 @@ if (Script.release && !Script.preview) {
 await prepareReleaseFiles()
 
 console.log("\n=== cli ===\n")
-await $`bun ./packages/devpass-code/script/publish.ts`
+await $`bun ./packages/cli/script/publish.ts`
 
-// The preview cli, sdk, plugin, and ui packages are published under the
-// @opencode-ai npm scope, which belongs to upstream. Skip them until this
-// fork has its own scope for them.
-
-if (Script.release && process.env.LATEST_YML_DIR && existsSync(process.env.LATEST_YML_DIR)) {
-  console.log("\n=== desktop ===\n")
-  await $`bun ./packages/desktop/scripts/finalize-latest-json.ts`
-  await $`bun ./packages/desktop/scripts/finalize-latest-yml.ts`
-}
+// The schema, sdk, plugin, ui, and other library packages are published under
+// the @opencode npm scope, which belongs to upstream. Only the CLI ships here.
 
 if (Script.release && !Script.preview) {
-  await $`git commit -am "release: ${tag}"`
+  if ((await $`git diff --quiet`.nothrow()).exitCode !== 0) await $`git commit -am "release: ${tag}"`
   await $`git tag -d ${tag}`.nothrow()
   await $`git tag ${tag}`
   await $`git push origin refs/tags/${tag} --force-with-lease --no-verify`
@@ -59,11 +64,10 @@ if (Script.release && !Script.preview) {
   await $`git fetch origin`
   await $`git checkout -B ${syncBranch} origin/${syncBranch}`
   await prepareReleaseFiles()
-  // [skip ci] so this push does not re-trigger the publish workflow on main.
-  await $`git commit -am "sync release versions for ${tag} [skip ci]"`
-  await $`git push origin HEAD:${syncBranch} --no-verify`
-}
-
-if (Script.release) {
-  await $`gh release edit ${tag} --draft=false --repo ${process.env.GH_REPO}`
+  await writeChangelog()
+  if ((await $`git diff --quiet`.nothrow()).exitCode !== 0) {
+    // The release already published this code; a push-triggered dev publish of a version bump is wasted work.
+    await $`git commit -am ${`sync release versions for ${tag} [skip ci]`}`
+    await $`git push origin HEAD:${syncBranch} --no-verify`
+  }
 }
