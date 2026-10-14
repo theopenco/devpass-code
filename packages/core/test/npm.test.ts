@@ -220,6 +220,7 @@ describe("Npm.add", () => {
     expect(entries.cached).toEqual(entries.added)
   })
 
+  // Real Git clones (ls-remote + clone + install) exceed Bun's default 5s timeout on GitHub-hosted Windows runners.
   test.each(["unnamed", "named"])("installs and locates %s Git packages with dependencies", async (kind) => {
     await using tmp = await tmpdir()
     const fixture = await createGitFixture(tmp.path)
@@ -246,7 +247,7 @@ describe("Npm.add", () => {
     ).toBeTruthy()
     expect(entries.added.directory).toContain(path.join("npm", await Npm.cacheKey(spec)))
     expect(entries.added.directory).toContain("node_modules")
-  })
+  }, 30_000)
 
   test.each(["commit", "branch"])("installs a Git package from an npm ::path: subdirectory at a %s", async (ref) => {
     await using tmp = await tmpdir()
@@ -265,7 +266,7 @@ describe("Npm.add", () => {
       await fs.stat(path.join(path.dirname(result.added.directory), "fixture-subdirectory-dependency", "package.json")),
     ).toBeTruthy()
     expect(result.outdated).toBeFalse()
-  })
+  }, 30_000)
 
   // Several real Git installs and updates exceed Bun's default timeout on Windows.
   test("checks and updates mutable Git packages without changing pinned installs", async () => {

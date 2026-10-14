@@ -34,7 +34,8 @@ test("standalone server exits when its owner is killed", async () => {
     owner.kill("SIGKILL")
     await owner.exited
     if (running(pid)) process.kill(pid, "SIGKILL")
-    await fs.rm(root, { recursive: true, force: true })
+    // Windows can retain directory handles briefly after the killed server exits (EBUSY).
+    await fs.rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
   }
 })
 
