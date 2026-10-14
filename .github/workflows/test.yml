@@ -80,6 +80,18 @@ jobs:
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
+      # GitHub-hosted images do not ship ripgrep. Core's Ripgrep service (packages/core/src/ripgrep/binary.ts)
+      # resolves `rg` from PATH first and otherwise downloads a release archive, which the test HttpClient blocks.
+      - name: Install ripgrep
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            choco install ripgrep --no-progress -y
+          else
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends ripgrep
+          fi
+          rg --version
+
       - name: Test Effect simplification rules
         if: runner.os == 'Linux'
         run: bun run test:effect-simplification-rules
