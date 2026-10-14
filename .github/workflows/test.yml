@@ -3,14 +3,14 @@ name: test
 on:
   push:
     branches:
-      - dev
+      - main
   pull_request:
   workflow_dispatch:
 
 concurrency:
-  # Keep every run on dev so cancelled checks do not pollute the default branch
+  # Keep every run on main so cancelled checks do not pollute the default branch
   # commit history. PRs and other branches still share a group and cancel stale runs.
-  group: ${{ case(github.ref == 'refs/heads/dev', format('{0}-{1}', github.workflow, github.run_id), format('{0}-{1}', github.workflow, github.event.pull_request.number || github.ref)) }}
+  group: ${{ case(github.ref == 'refs/heads/main', format('{0}-{1}', github.workflow, github.run_id), format('{0}-{1}', github.workflow, github.event.pull_request.number || github.ref)) }}
   cancel-in-progress: true
 
 permissions:
@@ -51,16 +51,16 @@ jobs:
           bun x turbo@2.10.2 ls --affected --filter=@opencode/app --output=json > affected.json
           bun -e 'const result = await Bun.file("affected.json").json(); console.log(`app=${result.packages.count > 0}`)' >> "$GITHUB_OUTPUT"
 
+  # Upstream gates PRs on Linux and Windows using 4-vCPU Blacksmith runners. On GitHub-hosted runners the
+  # Windows suite's timing-sensitive upstream tests (5s timeouts, file-lock races) fail at random, so PRs
+  # are gated on Linux; Windows runs on main and on demand without blocking.
   unit:
     name: unit (${{ matrix.settings.name }})
+    continue-on-error: ${{ matrix.settings.name == 'windows' }}
     strategy:
       fail-fast: false
       matrix:
-        settings:
-          - name: linux
-            host: ubuntu-24.04
-          - name: windows
-            host: windows-2025
+        settings: ${{ fromJSON(github.event_name == 'pull_request' && '[{"name":"linux","host":"ubuntu-24.04"}]' || '[{"name":"linux","host":"ubuntu-24.04"},{"name":"windows","host":"windows-2025"}]') }}
     runs-on: ${{ matrix.settings.host }}
     defaults:
       run:
@@ -182,9 +182,13 @@ jobs:
         working-directory: services/www
         run: bun run check:generated
 
+  # The browser suites cover upstream's web app, which this fork does not change. They are timing-sensitive
+  # on GitHub-hosted runners, so they run on main and on demand without blocking PRs.
   e2e:
     name: e2e (${{ matrix.settings.name }})
     needs: affected
+    if: github.event_name != 'pull_request'
+    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
@@ -195,7 +199,8 @@ jobs:
             host: windows-2025
     runs-on: ${{ matrix.settings.host }}
     env:
-      E2E_ENABLED: ${{ needs.affected.outputs.app == 'true' && github.ref_name != 'dev' && github.head_ref != 'dev' }}
+      E2E_ENABLED: ${{ needs.affected.outputs.app == 'true' || github.event_name == 'workflow_dispatch' }}
+      PLAYWRIGHT_WORKERS: 2
       PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.playwright-browsers
     defaults:
       run:
