@@ -35,7 +35,14 @@ const environment = {
 }
 
 const child = Bun.spawn({
-  cmd: [process.execPath, "test", "--only-failures", ...process.argv.slice(2)],
+  // GitHub-hosted CI runners are slower than upstream's Blacksmith runners; widen Bun's 5s default there.
+  cmd: [
+    process.execPath,
+    "test",
+    "--only-failures",
+    ...(process.env.CI ? ["--timeout", "20000"] : []),
+    ...process.argv.slice(2),
+  ],
   env: environment,
   stdin: "inherit",
   stdout: "inherit",
