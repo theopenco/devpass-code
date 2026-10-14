@@ -257,6 +257,7 @@ const withScanner = <A, E, R>(
     (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]().then(() => undefined)),
   )
 
+// 15s: a cold PowerShell start alone can take several seconds on hosted CI runners.
 const runPermissionCommand = (
   registry: Tool.Interface,
   command: string,
@@ -287,7 +288,7 @@ const runPermissionCommand = (
     expect(yield* permission.list()).toEqual([])
     expect(yield* Queue.size(queue)).toBe(0)
     return { exit, requests }
-  }).pipe(Effect.scoped, Effect.timeout(Duration.seconds(5)))
+  }).pipe(Effect.scoped, Effect.timeout(Duration.seconds(15)))
 
 // Directory cases still document inherited limitations; fixed scanner cases require matching behavior.
 describe("ShellTool scanner permissions", () => {
