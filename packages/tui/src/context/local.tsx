@@ -1,7 +1,7 @@
 import { createStore } from "solid-js/store"
 import { dedupeWith } from "effect/Array"
 import { createSimpleContext } from "./helper"
-import { batch, createMemo, onCleanup } from "solid-js"
+import { batch, createMemo, createResource, onCleanup } from "solid-js"
 import { useEvent } from "./event"
 import path from "path"
 import { useTuiPaths } from "./runtime"
@@ -22,6 +22,7 @@ import { useTheme } from "./theme"
 import { useToast } from "../ui/toast"
 import { useRoute } from "./route"
 import { useData } from "./data"
+import { useClient } from "./client"
 import { usePermission } from "./permission"
 import { useLocation } from "./location"
 import { parse } from "../util/model"
@@ -30,6 +31,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
   name: "Local",
   init: () => {
     const data = useData()
+    const client = useClient()
     const toast = useToast()
     const theme = useTheme()
     const route = useRoute()
@@ -178,6 +180,16 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           : { providerID: configured.providerID, modelID: configured.model, variant: configured.variant }
       })
 
+      // Plugins can choose the default model (for example a router); the server resolves it per location.
+      const [serverDefault] = createResource(
+        () => ({ location: location.ref ?? data.location.default(), count: models()?.length ?? 0 }),
+        (input) =>
+          client.api.model
+            .default({ location: input.location })
+            .then((result) => result.data && { providerID: result.data.providerID, modelID: result.data.id })
+            .catch(() => undefined),
+      )
+
       const fallbackModel = createMemo(() => {
         if (args.model) {
           const { providerID, modelID } = parse(args.model)
@@ -197,6 +209,9 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
             return item
           }
         }
+
+        const preferred = serverDefault.latest
+        if (preferred && isModelValid(preferred)) return preferred
 
         const model = models()?.[0]
         if (!model) return undefined
