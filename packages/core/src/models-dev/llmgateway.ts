@@ -93,11 +93,13 @@ export const isDecisionModel = (model: GatewayModel) =>
 
 function model(input: GatewayModel, base: CatalogModel | undefined): CatalogModel | undefined {
   if (input.id === "custom" || input.deactivated_at) return undefined
-  // Text models only: skip image generation, embeddings, decision models, and the like.
-  if (input.architecture?.output_modalities && !input.architecture.output_modalities.includes("text")) return undefined
-  const output = asModalities(input.architecture?.output_modalities, ["text"])
+  // Chat models only: skip image and audio generation, realtime voice, embeddings, decision and speech-to-text models.
+  const declared = input.architecture?.output_modalities
+  if (declared && (declared.length !== 1 || declared[0] !== "text")) return undefined
+  const output = asModalities(declared, ["text"])
   const inputs = asModalities(input.architecture?.input_modalities, ["text"])
   const providers = input.providers ?? []
+  if (inputs.includes("audio") && providers.length && !providers.some((provider) => provider.tools)) return undefined
   const context =
     input.context_length && input.context_length > 0 ? input.context_length : (base?.limit.context ?? 128_000)
   const reasoning = providers.some((provider) => provider.reasoning)

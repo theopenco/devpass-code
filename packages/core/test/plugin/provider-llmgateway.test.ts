@@ -73,12 +73,22 @@ describe("LLMGatewayCatalog", () => {
       supported_parameters: ["reasoning_effort", "tools"],
     },
     { id: "gpt-image-2", architecture: { output_modalities: ["image"] } },
+    { id: "qwen-image-3.0", architecture: { input_modalities: ["text"], output_modalities: ["text", "image"] } },
+    {
+      id: "grok-voice-3-0",
+      architecture: { input_modalities: ["text", "audio"], output_modalities: ["text", "audio"] },
+    },
+    {
+      id: "gpt-transcribe",
+      architecture: { input_modalities: ["text", "audio"], output_modalities: ["text"] },
+      providers: [{ tools: false }],
+    },
     { id: "old-model", deactivated_at: "2026-01-01" },
     { id: "jev-1.13.0", architecture: { input_modalities: ["text"], output_modalities: ["decision"] } },
     { id: "microsoft-decision-1", architecture: { input_modalities: ["text"], output_modalities: ["decision"] } },
   ]
 
-  test("builds both providers from the gateway's text models", () => {
+  test("builds both providers from the gateway's chat models", () => {
     const catalog = LLMGatewayCatalog.fromGateway(gateway)
     expect(Object.keys(catalog)).toEqual(["llmgateway", "llmgateway-devpass"])
     expect(catalog.llmgateway.api).toBe("https://api.llmgateway.io/v1")
