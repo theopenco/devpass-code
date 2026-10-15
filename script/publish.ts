@@ -71,3 +71,7 @@ if (Script.release && !Script.preview) {
     await $`git push origin HEAD:${syncBranch} --no-verify`
   }
 }
+
+if (Script.release) {
+  await $`gh release edit ${tag} --draft=false --repo ${process.env.GH_REPO}`
+}
