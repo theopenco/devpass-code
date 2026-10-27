@@ -1,7 +1,7 @@
 import type { IntegrationOAuthMethodRegistration } from "@opencode/plugin/effect/integration"
 import { define } from "@opencode/plugin/effect/plugin"
-import { Deferred, Effect, Schema } from "effect"
-import type { Server } from "node:http"
+import { Clock, Deferred, Effect, Option, Schema } from "effect"
+import type { Server, ServerResponse } from "node:http"
 import { App } from "../../app.js"
 import { Credential } from "../../credential.js"
 import { Hash } from "@opencode/util/hash"
@@ -12,54 +12,88 @@ import { OauthCallbackPage } from "../../oauth/page.js"
 
 const appURL = () =>
   (process.env.DEVPASS_APP_URL || process.env.LLMGATEWAY_APP_URL || "https://llmgateway.io").replace(/\/+$/, "")
+const internalAPIURL = () =>
+  (
+    process.env.DEVPASS_INTERNAL_API_URL ||
+    process.env.LLMGATEWAY_INTERNAL_API_URL ||
+    "https://internal.llmgateway.io"
+  ).replace(/\/+$/, "")
 const browserMethodID = Integration.MethodID.make("browser")
-// Keys minted by the browser flow do not expire (the latest representable Date); the gateway revokes them.
-const keyLifetime = 8_640_000_000_000_000
+// Keys with no expiry are stored with the latest representable Date; the gateway revokes them.
+const maxExpiry = 8_640_000_000_000_000
 
 const providers = [
   { id: "llmgateway", name: "LLM Gateway", org: "default" },
   { id: "llmgateway-devpass", name: "LLM Gateway DevPass", org: "devpass" },
 ] as const
 
+const Token = Schema.Struct({
+  api_key: Schema.String.check(Schema.isMinLength(1)),
+  expires_at: Schema.NullOr(Schema.String),
+})
+const decodeToken = Schema.decodeUnknownOption(Schema.fromJsonString(Token))
+const decodeTokenError = Schema.decodeUnknownOption(
+  Schema.fromJsonString(Schema.Struct({ error_description: Schema.optional(Schema.String) })),
+)
+
+// The dashboard hands the loopback a one-time code, never the key; the CLI redeems it with its PKCE verifier.
 const browser = (provider: (typeof providers)[number]) =>
   ({
     integrationID: provider.id,
     method: { id: browserMethodID, type: "oauth", label: "Log in with browser" },
+    // The dashboard mints a regular API key; once it expires, the user logs in again.
+    refresh: (value) =>
+      Clock.currentTimeMillis.pipe(
+        Effect.flatMap((now) =>
+          value.expires > now
+            ? Effect.succeed(value)
+            : Effect.fail(new Error(`${provider.name} API key expired. Log in with browser again.`)),
+        ),
+      ),
     authorize: () =>
       Effect.gen(function* () {
-        const state = Array.from(crypto.getRandomValues(new Uint8Array(24)), (byte) =>
-          byte.toString(16).padStart(2, "0"),
-        ).join("")
-        const received = yield* Deferred.make<string, Error>()
+        const verifier = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url")
+        const challenge = Buffer.from(
+          yield* Effect.promise(() => crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))),
+        ).toString("base64url")
+        const state = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url")
+        const received = yield* Deferred.make<{ code: string; response: ServerResponse }, Error>()
         // Lazy so runtimes without a loopback listener never evaluate node:http.
         const { createServer } = yield* Effect.promise(() => import("node:http"))
         const server = createServer((request, response) => {
           const url = new URL(request.url ?? "/", "http://127.0.0.1")
-          if (url.pathname !== "/callback") {
+          if (request.method !== "GET" || url.pathname !== "/callback") {
             response.writeHead(404).end("Not found")
             return
           }
-          const error = url.searchParams.get("error")
-          const key = url.searchParams.get("key")
-          const failure =
-            error ?? (!key || url.searchParams.get("state") !== state ? "Invalid authorization response" : undefined)
-          if (failure || !key) {
-            Effect.runFork(Deferred.fail(received, new Error(failure ?? "Missing API key")))
+          const code = url.searchParams.get("code")
+          const error =
+            url.searchParams.get("state") !== state
+              ? "Invalid authorization response"
+              : (url.searchParams.get("error") ?? (code ? undefined : "Missing authorization code"))
+          if (error || !code) {
+            const message = error ?? "Missing authorization code"
             response
               .writeHead(400, { "Content-Type": "text/html; charset=utf-8" })
-              .end(OauthCallbackPage.error(failure ?? "Missing API key", { provider: "LLM Gateway" }))
+              .end(OauthCallbackPage.error(message, { provider: "LLM Gateway" }))
+            Effect.runSync(Deferred.fail(received, new Error(message)))
             return
           }
-          Effect.runFork(Deferred.succeed(received, key))
-          response
-            .writeHead(200, { "Content-Type": "text/html; charset=utf-8" })
-            .end(OauthCallbackPage.success({ provider: "LLM Gateway" }))
+          if (!Effect.runSync(Deferred.succeed(received, { code, response })))
+            response.writeHead(409).end("Authorization callback already received")
         })
+        yield* Effect.addFinalizer(() =>
+          Effect.sync(() => {
+            server.close()
+            server.closeAllConnections()
+          }),
+        )
         const port = yield* listen(server)
-        yield* Effect.addFinalizer(() => Effect.sync(() => server.close()))
         const params = new URLSearchParams({
           callback: `http://127.0.0.1:${port}/callback`,
           state,
+          code_challenge: challenge,
+          code_challenge_method: "S256",
           source: "devpass-code",
           org: provider.org,
           name: "DevPass Code CLI",
@@ -69,20 +103,61 @@ const browser = (provider: (typeof providers)[number]) =>
           url: `${appURL()}/connect/cli?${params.toString()}`,
           instructions: "Approve DevPass Code in your browser, then return to your terminal.",
           expiresAt: Date.now() + 5 * 60 * 1000,
-          callback: Deferred.await(received).pipe(
-            Effect.map((key) =>
-              Credential.OAuth.make({
-                type: "oauth",
-                methodID: browserMethodID,
-                access: key,
-                refresh: "",
-                expires: keyLifetime,
-              }),
-            ),
-          ),
+          callback: Effect.gen(function* () {
+            const request = yield* Deferred.await(received)
+            const respond = (error?: string) =>
+              Effect.sync(() =>
+                request.response
+                  .writeHead(error ? 400 : 200, { "Content-Type": "text/html; charset=utf-8" })
+                  .end(
+                    error
+                      ? OauthCallbackPage.error(error, { provider: "LLM Gateway" })
+                      : OauthCallbackPage.success({ provider: "LLM Gateway" }),
+                  ),
+              )
+            return yield* exchangeCode(request.code, verifier).pipe(
+              Effect.tap(() => respond()),
+              Effect.tapError((error) => respond(error.message)),
+              // Bun's server.closeAllConnections() leaves an unanswered callback response pending.
+              Effect.onInterrupt(() => Effect.sync(() => request.response.destroy())),
+            )
+          }),
         }
       }),
   }) satisfies IntegrationOAuthMethodRegistration
+
+function exchangeCode(code: string, verifier: string) {
+  return Effect.gen(function* () {
+    const response = yield* Effect.tryPromise({
+      try: (signal) =>
+        fetch(`${internalAPIURL()}/public/cli-auth/token`, {
+          method: "POST",
+          signal,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code, code_verifier: verifier }),
+        }),
+      catch: () => new Error("LLM Gateway token exchange request failed"),
+    })
+    const body = yield* Effect.promise(() => response.text().catch(() => ""))
+    if (!response.ok) {
+      const detail = Option.getOrUndefined(decodeTokenError(body))?.error_description
+      return yield* Effect.fail(
+        new Error(detail ? `LLM Gateway login failed: ${detail}` : `LLM Gateway login failed (${response.status})`),
+      )
+    }
+    const token = Option.getOrUndefined(decodeToken(body))
+    const expires = token?.expires_at ? Date.parse(token.expires_at) : maxExpiry
+    if (!token || !Number.isSafeInteger(expires))
+      return yield* Effect.fail(new Error("Invalid LLM Gateway token response"))
+    return Credential.OAuth.make({
+      type: "oauth",
+      methodID: browserMethodID,
+      access: token.api_key,
+      refresh: "",
+      expires,
+    })
+  })
+}
 
 function listen(server: Server) {
   return Effect.callback<number, Error>((resume) => {
