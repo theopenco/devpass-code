@@ -85,6 +85,7 @@ Open the model picker or run `/connect`, pick **LLM Gateway** or **LLM Gateway D
 Config lives in `~/.config/devpass-code/devpass-code.jsonc` and per project in `devpass-code.json` or `.devpass-code/`. Existing `opencode.json` files and `.opencode/` directories are read too.
 
 - `DEVPASS_APP_URL` / `LLMGATEWAY_APP_URL` — override the dashboard URL used for browser login (defaults to `https://llmgateway.io`).
+- `DEVPASS_INTERNAL_API_URL` / `LLMGATEWAY_INTERNAL_API_URL` — override the API that redeems the browser login code (defaults to `https://internal.llmgateway.io`).
 - `LLMGATEWAY_API_URL` — override the gateway API (defaults to `https://api.llmgateway.io/v1`).
 - `LLMGATEWAY_API_KEY` — provide an API key via the environment instead of logging in.
 

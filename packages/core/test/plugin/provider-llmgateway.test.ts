@@ -201,50 +201,76 @@ describe("LLMGatewayPlugin", () => {
     }),
   )
 
-  it.live("stores the key the dashboard hands back to the loopback server", () =>
+  it.live("redeems the one-time code from the loopback with the PKCE verifier", () =>
     Effect.gen(function* () {
       yield* addPlugin()
       const integrations = yield* Integration.Service
       const credentials = yield* Credential.Service
       const integrationID = Integration.ID.make("llmgateway-devpass")
-      const attempt = yield* integrations.oauth.connect({
-        integrationID,
-        methodID: Integration.MethodID.make("browser"),
-        label: "DevPass",
-      })
-      const url = new URL(attempt.url)
-      expect(url.origin + url.pathname).toBe("https://llmgateway.io/connect/cli")
-      expect(url.searchParams.get("org")).toBe("devpass")
-      expect(url.searchParams.get("source")).toBe("devpass-code")
-      const callback = new URL(url.searchParams.get("callback") ?? "")
-      expect(callback.hostname).toBe("127.0.0.1")
+      const exchanges: { code: string; code_verifier: string }[] = []
+      const token = {
+        status: 200,
+        body: { api_key: "llmgtwy_minted", expires_at: "2099-01-01T00:00:00.000Z" } as object,
+      }
+      globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+        if (String(input) !== "https://internal.llmgateway.io/public/cli-auth/token") return realFetch(input, init)
+        exchanges.push(JSON.parse(String(init?.body)))
+        return Response.json(token.body, { status: token.status })
+      }) as typeof fetch
+      const connect = () =>
+        integrations.oauth
+          .connect({ integrationID, methodID: Integration.MethodID.make("browser"), label: "DevPass" })
+          .pipe(Effect.map((attempt) => ({ attempt, url: new URL(attempt.url) })))
+      const callback = (url: URL, params: Record<string, string>) => {
+        const target = new URL(url.searchParams.get("callback") ?? "")
+        for (const [key, value] of Object.entries(params)) target.searchParams.set(key, value)
+        return Effect.promise(() => realFetch(target, { headers: { Connection: "close" } }))
+      }
+      const settled = (attemptID: Integration.AttemptID) =>
+        integrations.oauth.status({ integrationID, attemptID }).pipe(
+          Effect.repeat({
+            until: (value) => value.status !== "pending",
+            schedule: Schedule.spaced("1 millis"),
+            times: 100,
+          }),
+        )
 
-      const forged = new URL(callback)
-      forged.searchParams.set("state", "wrong")
-      forged.searchParams.set("key", "llmgtwy_forged")
-      expect((yield* Effect.promise(() => fetch(forged, { headers: { Connection: "close" } }))).status).toBe(400)
-      expect((yield* integrations.oauth.status({ integrationID, attemptID: attempt.attemptID })).status).toBe("failed")
+      const forged = yield* connect()
+      expect(forged.url.origin + forged.url.pathname).toBe("https://llmgateway.io/connect/cli")
+      expect(forged.url.searchParams.get("org")).toBe("devpass")
+      expect(forged.url.searchParams.get("source")).toBe("devpass-code")
+      expect(forged.url.searchParams.get("code_challenge_method")).toBe("S256")
+      expect(new URL(forged.url.searchParams.get("callback") ?? "").hostname).toBe("127.0.0.1")
+      expect((yield* callback(forged.url, { state: "wrong", code: "forged" })).status).toBe(400)
+      expect((yield* settled(forged.attempt.attemptID)).status).toBe("failed")
 
-      const retry = yield* integrations.oauth.connect({
-        integrationID,
-        methodID: Integration.MethodID.make("browser"),
-        label: "DevPass",
-      })
-      const next = new URL(retry.url)
-      const ok = new URL(next.searchParams.get("callback") ?? "")
-      ok.searchParams.set("state", next.searchParams.get("state") ?? "")
-      ok.searchParams.set("key", "llmgtwy_minted")
-      expect((yield* Effect.promise(() => fetch(ok, { headers: { Connection: "close" } }))).status).toBe(200)
-      const status = yield* integrations.oauth.status({ integrationID, attemptID: retry.attemptID }).pipe(
-        Effect.repeat({
-          until: (value) => value.status !== "pending",
-          schedule: Schedule.spaced("1 millis"),
-          times: 100,
-        }),
+      token.status = 400
+      token.body = { error: "invalid_grant", error_description: "The login code is invalid" }
+      const rejected = yield* connect()
+      expect(
+        (yield* callback(rejected.url, { state: rejected.url.searchParams.get("state") ?? "", code: "stale" })).status,
+      ).toBe(400)
+      expect((yield* settled(rejected.attempt.attemptID)).status).toBe("failed")
+
+      token.status = 200
+      token.body = { api_key: "llmgtwy_minted", expires_at: "2099-01-01T00:00:00.000Z" }
+      const ok = yield* connect()
+      expect(
+        (yield* callback(ok.url, { state: ok.url.searchParams.get("state") ?? "", code: "one-time" })).status,
+      ).toBe(200)
+      expect((yield* settled(ok.attempt.attemptID)).status).toBe("complete")
+      const exchange = exchanges.at(-1)
+      expect(exchange?.code).toBe("one-time")
+      expect(new Bun.CryptoHasher("sha256").update(exchange?.code_verifier ?? "").digest("base64url")).toBe(
+        ok.url.searchParams.get("code_challenge") ?? "",
       )
-      expect(status.status).toBe("complete")
       const saved = (yield* credentials.list(integrationID)).find((item) => item.label === "DevPass")?.value
-      expect(saved).toMatchObject({ type: "oauth", access: "llmgtwy_minted", refresh: "" })
+      expect(saved).toMatchObject({
+        type: "oauth",
+        access: "llmgtwy_minted",
+        refresh: "",
+        expires: Date.parse("2099-01-01T00:00:00.000Z"),
+      })
     }),
   )
 
